@@ -81,3 +81,28 @@ func GenerateKey(random io.Reader, bits int) (*PrivateKey, error) {
 		PSquared: psquare,
 	}, nil
 }
+
+// Encrypt encrypts a plain text represented as a byte array. It returns
+// an error if plain text value is larger than modulus N of Public key.
+func (pub *PublicKey) Encrypt(plainText []byte) ([]byte, error) {
+	// choose a random integer r from {1...n-1}
+	r, err := rand.Int(rand.Reader, new(big.Int).Sub(pub.N, one))
+	if err != nil {
+		return nil, err
+	}
+
+	m := new(big.Int).SetBytes(plainText)
+	if m.Cmp(pub.N) == 1 { //  m < N
+		return nil, ErrLargeMessage
+	}
+
+	// c = g^m * h^r mod N
+	c := new(big.Int).Mod(
+		new(big.Int).Mul(
+			new(big.Int).Exp(pub.G, m, pub.N),
+			new(big.Int).Exp(pub.H, r, pub.N),
+		),
+		pub.N,
+	)
+	return c.Bytes(), nil
+}
