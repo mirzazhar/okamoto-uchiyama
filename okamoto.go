@@ -141,3 +141,41 @@ func (priv *PrivateKey) Decrypt(cipherText []byte) ([]byte, error) {
 	)
 	return m.Bytes(), nil
 }
+
+// HomomorphicEncTwo performs homomorphic operation over two passed chiphers.
+// Okamoto-Uchiyama has additive homomorphic property, so resultant cipher
+// contains the sum of two numbers.
+func (pub *PublicKey) HomomorphicEncTwo(c1, c2 []byte) ([]byte, error) {
+	cipherA := new(big.Int).SetBytes(c1)
+	cipherB := new(big.Int).SetBytes(c2)
+	if cipherA.Cmp(pub.N) == 1 && cipherB.Cmp(pub.N) == 1 { // c < N
+		return nil, ErrLargeCipher
+	}
+
+	// C = c1*c2 mod N
+	C := new(big.Int).Mod(
+		new(big.Int).Mul(cipherA, cipherB),
+		pub.N,
+	)
+	return C.Bytes(), nil
+}
+
+// HommorphicEncMultiple performs homomorphic operation over multiple passed chiphers.
+// Okamoto-Uchiyama has additive homomorphic property, so resultant cipher
+// contains the sum of multiple numbers.
+func (pub *PublicKey) HommorphicEncMultiple(ciphers ...[]byte) ([]byte, error) {
+	C := one
+
+	for i := 0; i < len(ciphers); i++ {
+		cipher := new(big.Int).SetBytes(ciphers[i])
+		if cipher.Cmp(pub.N) == 1 { // c < N
+			return nil, ErrLargeCipher
+		}
+		// C = c1*c2*c3...cn mod N
+		C = new(big.Int).Mod(
+			new(big.Int).Mul(C, cipher),
+			pub.N,
+		)
+	}
+	return C.Bytes(), nil
+}
